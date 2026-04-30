@@ -175,7 +175,11 @@ if self.model().isHandleValid(handle):
     self.model().dataChanged.emit(...)
 ```
 
-**Filter header** — `SchemaHeaderView` expands the header to show a widget below the label for any column that provides one. Use `ComboBoxHeaderMixin` for a built-in combo box backed by a `QStandardItemModel`:
+**Filter header** — `SchemaHeaderView` expands the header to show a widget below the label for any column that provides one. Works with proxy models — `SchemaHeaderView` unwraps proxy chains to find the source `SchemaTableModel`.
+
+Two built-in header mixins are available. Both inherit from `SchemaColumn` and emit `filterChanged(str)` when their widget value changes:
+
+`ComboBoxHeaderMixin` — editable combo box backed by a `QStandardItemModel`:
 
 ```python
 from qtkit.SchemaTable import SchemaTableModel, DictKeyColumn, ComboBoxHeaderMixin, SchemaHeaderView
@@ -184,22 +188,25 @@ from qtpy.QtGui import QStandardItem
 class StatusColumn(ComboBoxHeaderMixin, DictKeyColumn):
     def __init__(self):
         super().__init__("Status", "status")
-        for label in ("All", "Active", "Inactive"):
+        for label in ("", "Active", "Inactive"):
             self.completionModel().appendRow(QStandardItem(label))
-
-model = SchemaTableModel([StatusColumn(), DictKeyColumn("Name", "name")])
-model.setRows(my_dicts)
-
-view = QTableView()
-view.setHorizontalHeader(SchemaHeaderView())
-view.setModel(model)
 ```
 
-Connect to the combo box to filter:
+`LineEditHeaderMixin` — text input with autocomplete backed by a `QStandardItemModel`:
 
 ```python
-col = model.columnAt(0)
-col.headerWidget(view.horizontalHeader().viewport()).currentIndexChanged.connect(on_filter_changed)
+from qtkit.SchemaTable import LineEditHeaderMixin, AttributeColumn
+
+class NameColumn(LineEditHeaderMixin, AttributeColumn):
+    def __init__(self):
+        super().__init__("Name", "name")
+```
+
+Both emit `col.filterChanged(value)` when the widget changes — connect in a controller rather than accessing the widget directly:
+
+```python
+for col_idx, col in enumerate(columns):
+    col.filterChanged.connect(lambda v, idx=col_idx: proxy.setFilter(idx, v))
 ```
 
 ---

@@ -8,11 +8,13 @@ __all__ = [
     "ImageColumn",
     "SchemaHeaderView",
     "ComboBoxHeaderMixin",
+    "LineEditHeaderMixin",
 ]
 from .model import (
     SchemaTableModel,
     SchemaColumn,
     ComboBoxHeaderMixin,
+    LineEditHeaderMixin,
     Handle,
     INVALID_HANDLE,
     AttributeColumn,
