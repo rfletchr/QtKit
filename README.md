@@ -4,7 +4,115 @@ This library solves some common issues I encounter regularly with Qt. All Qt int
 
 ---
 
+## CustomRoleEnum
+
+Base class for defining custom item data roles that start at `Qt.UserRole + 1`. Use `enum.auto()` — values are assigned correctly without manual offsets.
+
+```python
+import enum
+from qtkit.CustomRoleEnum import QtCustomRoleEnum
+
+class MyRoles(QtCustomRoleEnum):
+    Name  = enum.auto()  # Qt.UserRole + 1
+    Age   = enum.auto()  # Qt.UserRole + 2
+    Email = enum.auto()  # Qt.UserRole + 3
+
+item.setData("Alice", MyRoles.Name)
+item.data(MyRoles.Name)  # "Alice"
+```
+
+---
+
+## QueryBuilder
+
+![QueryBuilder](images/QueryBuilder.png)
+
+A Qt MVP query builder UI backed by an AST object model. Users construct arbitrarily nested `AND`/`OR` groups of field comparisons. The result is a plain Python object tree that any query backend can consume.
+
+**Fields** are defined ahead of time and passed to the controller:
+
+```python
+from qtkit.QueryBuilder import Field
+
+fields = [
+    Field(
+        name="name",
+        type=str,
+        operators=["contains", "equals", "starts with"],
+        value_model=None,
+        allow_custom_values=False,
+        default_operator="contains",
+    ),
+    Field(
+        name="status",
+        type=str,
+        operators=["=", "!="],
+        value_model=status_model,   # QAbstractItemModel drives the value combo box
+        allow_custom_values=False,
+        default_operator="=",
+    ),
+    Field(
+        name="age",
+        type=int,
+        operators=["=", ">", "<", ">=", "<="],
+        value_model=None,
+        allow_custom_values=False,
+        default_operator=">=",
+    ),
+]
+```
+
+The `type` drives the value editor — `str` → `QLineEdit`, `int` → `QSpinBox`, `float` → `QDoubleSpinBox`, `datetime.date` → `QDateEdit`, `datetime.datetime` → `QDateTimeEdit`, `bool` → combo box. If `value_model` is set it takes precedence; `allow_custom_values` makes the combo editable.
+
+**Controller** is the entry point:
+
+```python
+from qtkit.QueryBuilder import QueryBuilderController
+
+ctrl = QueryBuilderController(fields)
+layout.addWidget(ctrl.view())
+
+# Read the current query as an AST
+result = ctrl.build()  # -> AndOperator | OrOperator | None
+```
+
+**AST types:**
+
+```python
+from qtkit.QueryBuilder import AndOperator, OrOperator, Comparison
+
+# AndOperator / OrOperator hold a list of children (recursive)
+# Comparison holds the Field object, operator string, and value string
+```
+
+**Serialization** — round-trip via plain dicts (JSON-safe). Field objects are not serialized; they are resolved by name on load:
+
+```python
+from qtkit.QueryBuilder import serialize, deserialize
+
+data = serialize(ctrl.build())
+# {"type": "and", "comparisons": [
+#     {"type": "comparison", "field": "name", "operator": "contains", "value": "foo"},
+#     {"type": "or", "comparisons": [...]}
+# ]}
+
+ctrl.load(deserialize(data, fields))
+```
+
+**Embedding in a larger view** — pass an existing `QueryBuilderView` to avoid creating a new window:
+
+```python
+from qtkit.QueryBuilder import QueryBuilderView, QueryBuilderController
+
+view = QueryBuilderView()
+ctrl = QueryBuilderController(fields, view=view)
+```
+
+---
+
 ## SchemaTable
+
+![SchemaTable](images/SchemaTable.png)
 
 A generic table model driven by column objects. Each column defines how to extract, display, and edit data — the model contains no column-specific branching.
 

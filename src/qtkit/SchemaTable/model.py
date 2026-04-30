@@ -29,6 +29,8 @@ class SchemaColumn(QtCore.QObject, typing.Generic[T]):
     model can emit dataChanged for affected cells.
     """
 
+    filterChanged = QtCore.Signal(str)
+
     def __init__(self, parent: typing.Optional[QtCore.QObject] = None):
         super().__init__(parent)
         self.__model: typing.Optional["SchemaTableModel[T]"] = None
@@ -98,7 +100,7 @@ class SchemaColumn(QtCore.QObject, typing.Generic[T]):
         return None
 
 
-class ComboBoxHeaderMixin:
+class ComboBoxHeaderMixin(SchemaColumn[T]):
     """
     Mixin for SchemaColumn subclasses that provides a QComboBox header widget
     backed by a QStandardItemModel.
@@ -125,10 +127,11 @@ class ComboBoxHeaderMixin:
             self._combo_widget.setModel(self._combo_model)
             self._combo_widget.setCompleter(self._completer)
             self._combo_widget.setEditable(True)
+            self._combo_widget.currentTextChanged.connect(self.filterChanged)
         return self._combo_widget
 
 
-class LineEditHeaderMixin:
+class LineEditHeaderMixin(SchemaColumn[T]):
     """
     Mixin for SchemaColumn subclasses that provides a QLineEdit header widget.
     """
@@ -152,6 +155,7 @@ class LineEditHeaderMixin:
                 QtWidgets.QCompleter.CompletionMode.PopupCompletion
             )
             self._line_edit_widget.setCompleter(completer)
+            self._line_edit_widget.textChanged.connect(self.filterChanged)
         return self._line_edit_widget
 
 

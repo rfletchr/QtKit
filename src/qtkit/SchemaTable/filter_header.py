@@ -6,6 +6,16 @@ from qtpy import QtCore, QtGui, QtWidgets
 from .model import SchemaTableModel
 
 
+def _unwrapSchema(model: QtCore.QAbstractItemModel) -> typing.Optional[SchemaTableModel]:
+    if isinstance(model, SchemaTableModel):
+        return model
+    if isinstance(model, QtCore.QAbstractProxyModel):
+        source = model.sourceModel()
+        if source is not None:
+            return _unwrapSchema(source)
+    return None
+
+
 class SchemaHeaderView(QtWidgets.QHeaderView):
     def __init__(self, parent: typing.Optional[QtWidgets.QWidget] = None):
         super().__init__(QtCore.Qt.Orientation.Horizontal, parent)
@@ -38,8 +48,8 @@ class SchemaHeaderView(QtWidgets.QHeaderView):
         self.updateGeometry()
 
     def _onColumnsAboutToBeRemoved(self, _, first: int, last: int) -> None:
-        model = self.model()
-        if not isinstance(model, SchemaTableModel):
+        model = _unwrapSchema(self.model())
+        if model is None:
             return
         for i in range(first, last + 1):
             col = model.columnAt(i)
@@ -53,8 +63,8 @@ class SchemaHeaderView(QtWidgets.QHeaderView):
         self.updateGeometry()
 
     def _onModelAboutToBeReset(self) -> None:
-        model = self.model()
-        if not isinstance(model, SchemaTableModel):
+        model = _unwrapSchema(self.model())
+        if model is None:
             return
         for i in range(model.columnCount()):
             col = model.columnAt(i)
@@ -71,8 +81,8 @@ class SchemaHeaderView(QtWidgets.QHeaderView):
         return super().sizeHint().height()
 
     def _maxWidgetHeight(self) -> int:
-        model = self.model()
-        if not isinstance(model, SchemaTableModel):
+        model = _unwrapSchema(self.model())
+        if model is None:
             return 0
         vp = self.viewport()
         if vp is None:
@@ -91,8 +101,8 @@ class SchemaHeaderView(QtWidgets.QHeaderView):
         return QtCore.QSize(s.width(), s.height() + self._maxWidgetHeight())
 
     def _repositionWidgets(self) -> None:
-        model = self.model()
-        if not isinstance(model, SchemaTableModel):
+        model = _unwrapSchema(self.model())
+        if model is None:
             return
         vp = self.viewport()
         if vp is None:
